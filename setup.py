@@ -8,7 +8,7 @@ setup(
     long_description_content_type="text/markdown",
     author="Mahmood Anaam",
     author_email="eng.mahmood.anaam@gmail.com",
-    url="https://github.com/Mahmood-Anaam/Violet",
+    url="https://github.com/Mahmood-Anaam/Violet3",
     license="MIT",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
