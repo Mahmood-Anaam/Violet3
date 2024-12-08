@@ -10,14 +10,14 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 
 
-
 class Violet(CaptioningModel):
 
     def __init__(self, bos_idx, encoder,n_layer=12,tau=0):
         super(Violet, self).__init__()
         self.bos_idx = bos_idx
         self.encoder = encoder
-        self.clip = CLIPVisionModelWithProjection.from_pretrained("openai/clip-vit-large-patch14",cache_dir = "./").to("cuda")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.clip = CLIPVisionModelWithProjection.from_pretrained("openai/clip-vit-large-patch14",cache_dir = "./").to(self.device)
         # self.clip.to("cuda")
         jasmine = AutoModelForCausalLM.from_pretrained("UBC-NLP/Jasmine-350M")  
         state_dict = jasmine.state_dict()
@@ -73,7 +73,7 @@ class Violet(CaptioningModel):
     def forward(self, images, seq, *args):
         #enc_output, mask_enc = self.encoder(images) #mask encoder is not important, it was for empty detections
         #model = CLIPVisionModelWithProjection.from_pretrained("openai/clip-vit-large-patch14")
-        images = images.to("cuda")
+        images = images.to(self.device)
         outputs = self.clip(images) #the clip boi
         image_embeds = outputs.image_embeds # Visual projection output
         image_embeds = image_embeds.unsqueeze(1)
