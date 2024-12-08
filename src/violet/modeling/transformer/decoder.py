@@ -12,7 +12,7 @@ import numpy as np
 from torch.nn import LayerNorm
 from torch.nn import functional as F
 from torch.nn import LayerNorm
-from violet_image_captioning.models.containers import Module, ModuleList
+from violet.modeling.transformer.containers import Module, ModuleList
 from transformers import activations
 
 def gelu(x):

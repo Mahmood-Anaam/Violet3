@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch import nn
-from violet_image_captioning.models.containers import Module
+from violet.modeling.transformer.containers import Module
 from torch.nn import Parameter
 
 class Conv1D(nn.Module):

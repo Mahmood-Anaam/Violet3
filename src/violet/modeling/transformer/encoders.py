@@ -1,8 +1,8 @@
 from torch.nn import functional as F
-from violet_image_captioning.models.transformer.utils import PositionWiseFeedForward
+from violet.modeling.transformer.utils import PositionWiseFeedForward
 import torch
 from torch import nn
-from violet_image_captioning.models.transformer.attention import MultiHeadAttention
+from violet.modeling.transformer.attention import MultiHeadAttention
 import math
 
 class EncoderLayer(nn.Module):

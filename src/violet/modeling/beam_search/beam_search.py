@@ -1,5 +1,5 @@
 import torch
-import violet_image_captioning.utils as utils
+import violet.utils as utils
 
 
 class BeamSearch(object):

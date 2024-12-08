@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 from torch import nn
-from violet_image_captioning.utils.typing import *
+from violet.utils.typing import *
 
 
 class Module(nn.Module):
