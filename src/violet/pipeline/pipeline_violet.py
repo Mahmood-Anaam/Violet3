@@ -2,7 +2,9 @@ import torch
 import numpy as np
 from typing import List, Union, Dict
 from PIL import Image
-from violet.modeling.transformer import Violet, VisualEncoder, ScaledDotProductAttention
+from violet.modeling.transformer import  VisualEncoder, ScaledDotProductAttention
+from violet.modeling import Violet
+
 from transformers import AutoTokenizer
 import torchvision.transforms as transforms
 
