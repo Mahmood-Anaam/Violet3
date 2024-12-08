@@ -10,7 +10,9 @@ setup(
     author_email="eng.mahmood.anaam@gmail.com",
     url="https://github.com/Mahmood-Anaam/Violet",
     license="MIT",
-    packages=find_packages(exclude=["tests", "examples", "docs"]),
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
+
     include_package_data=True,
     install_requires=[
         "torch>=1.13.1",
