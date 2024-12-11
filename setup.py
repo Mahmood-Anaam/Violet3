@@ -6,7 +6,7 @@ setup(
     description="Violet: A Vision-Language Model for Arabic Image Captioning with Gemini Decoder",
     author="Mahmood Anaam",
     author_email="eng.mahmood.anaam@gmail.com",
-    url="https://github.com/Mahmood-Anaam/Violet3",
+    url="https://github.com/Mahmood-Anaam/Violet",
     license="MIT",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
