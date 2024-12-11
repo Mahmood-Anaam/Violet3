@@ -24,7 +24,7 @@ class VioletImageCaptioningPipeline:
       cfg (VioletConfig): Configuration object containing model parameters.
     """
     self.cfg = cfg
-    self.device = self.cfg.DEVICE
+    self.device = self.cfg.DEVICE if self.cfg.DEVICE else torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Initialize model and tokenizer
     self.tokenizer = AutoTokenizer.from_pretrained(self.cfg.TOKENIZER_NAME)

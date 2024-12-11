@@ -12,13 +12,12 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 class Violet(CaptioningModel):
 
-    def __init__(self, bos_idx, encoder,n_layer=12,tau=0):
+    def __init__(self, bos_idx, encoder,n_layer=12,tau=0,device=None):
         super(Violet, self).__init__()
         self.bos_idx = bos_idx
         self.encoder = encoder
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.clip = CLIPVisionModelWithProjection.from_pretrained("openai/clip-vit-large-patch14").to(self.device)
-        # self.clip.to("cuda")
         jasmine = AutoModelForCausalLM.from_pretrained("UBC-NLP/Jasmine-350M")  
         state_dict = jasmine.state_dict()
         config = GPT2Config()
@@ -118,7 +117,10 @@ class Violet(CaptioningModel):
                         image_embeds = image_embeds.unsqueeze(1)
                     self.enc_output, self.mask_enc = self.encoder(image_embeds)
                 elif is_feature and visual is not None:
-                    self.enc_output, self.mask_enc = visual,torch.tensor(False).repeat(visual.shape[0], 1, 1, 1).bool()
+                    self.enc_output = visual.to(self.device)
+                    self.mask_enc = torch.tensor(False).repeat(visual.shape[0], 1, 1, 1).bool().to(self.device)
+                  
+                    
                 else:
                     raise ValueError("Input is missing or invalid.")
 
