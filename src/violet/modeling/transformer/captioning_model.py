@@ -43,7 +43,7 @@ class CaptioningModel(Module):
         with self.statefulness(b_s):
             out = None
             for t in range(max_len):
-                log_probs_t = self.step(t, out, visual, None, mode='feedback', **kwargs)
+                log_probs_t,_ = self.step(t, out, visual, None, mode='feedback', **kwargs)
                 out = torch.max(log_probs_t, -1)[1]
                 mask = mask * (out.squeeze(-1) != eos_idx).float()
                 log_probs.append(log_probs_t * mask.unsqueeze(-1).unsqueeze(-1))
