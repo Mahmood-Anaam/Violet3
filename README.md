@@ -6,6 +6,8 @@
 1. **Arabic Image Captioning**: Generate high-quality captions for images in Arabic.
 2. **Visual Feature Extraction**: Extract image features for integration into vision-language models or downstream tasks.
 3. **Customizable for VQA**: Use extracted features and captions to build Arabic visual question-answering systems.
+4. **Mixed Input Support**: Handle batches of images in various formats, such as URLs, file paths, NumPy arrays, PyTorch tensors, and PIL Image objects.
+
 
 ## How to Use Violet
 
@@ -76,13 +78,5 @@ Generate captions based on precomputed visual features.
    for caption in captions:
      print(caption)
    ```
-
-### Sample Outputs
-
-#### Caption Generation
-![Sample Caption](attachment:image.png)
-
-#### Feature Extraction and Multi-Image Captioning
-![Multi-Image Output](attachment:image.png)
-
----
+## Contributions
+**Violet** is a library for Arabic image captioning and visual feature extraction, designed for tasks like image captioning and visual question answering (VQA). Contributions are welcome on the [GitHub Repository](https://github.com/Mahmood-Anaam/Violet).
