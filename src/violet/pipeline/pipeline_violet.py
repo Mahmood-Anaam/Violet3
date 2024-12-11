@@ -95,11 +95,11 @@ class VioletImageCaptioningPipeline:
     Returns:
         torch.Tensor: Encoded visual features.
     """
-    if hasattr(images, '__iter__'):
-      images = list(map(self.prepare_image, images))
-    else:
-      images = self.prepare_image(images)
-    
+    if not isinstance(images, list):
+      images = [images]
+
+    images = list(map(self.prepare_image, images))
+  
     images = self.processor(images=images, return_tensors="pt")['pixel_values'].to(self.device)
     with torch.no_grad():
         outputs = self.model.clip(images)
@@ -149,10 +149,10 @@ class VioletImageCaptioningPipeline:
     Returns:
         list: Generated captions for each image.
     """
-    if hasattr(images, '__iter__'):
-      images = list(map(self.prepare_image, images))
-    else:
-      images = self.prepare_image(images)
+    if not isinstance(images, list):
+      images = [images]
+
+    images = list(map(self.prepare_image, images))
 
     images = self.processor(images=images, return_tensors="pt")['pixel_values'].to(self.device)
     with torch.no_grad():
