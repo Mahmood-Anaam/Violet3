@@ -38,7 +38,8 @@ class VioletImageCaptioningPipeline:
             bos_idx=self.tokenizer.vocab['<|endoftext|>'],
             encoder=encoder,
             n_layer=self.cfg.DECODER_LAYERS,
-            tau=self.cfg.TAU
+            tau=self.cfg.TAU,
+            device=self.device
         )
 
     checkpoint = torch.load(self.cfg.CHECKPOINT_DIR, map_location=self.device)
