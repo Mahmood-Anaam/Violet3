@@ -1,4 +1,3 @@
-# src\violet\modeling\transformer\attention.py
 import numpy as np
 import torch
 from torch import nn

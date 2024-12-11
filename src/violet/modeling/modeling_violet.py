@@ -1,4 +1,3 @@
-# src\violet\modeling\modeling_violet.py
 import torch
 from torch import nn
 import copy

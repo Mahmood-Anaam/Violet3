@@ -1,4 +1,3 @@
-# src\violet\modeling\transformer\captioning_model.py
 import torch
 from torch import distributions
 import violet.utils as utils

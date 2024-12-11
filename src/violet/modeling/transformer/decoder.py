@@ -3,7 +3,6 @@
     Original Paper and repository here : https://github.com/openai/gpt-2
     GPT2 Pytorch Model : https://github.com/huggingface/pytorch-pretrained-BERT
 '''
-# src\violet\modeling\transformer\decoder.py
 import copy
 import torch
 import math
