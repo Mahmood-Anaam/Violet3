@@ -11,7 +11,7 @@ from typing import List, Union, Dict
 from violet.configuration import VioletConfig
 
 
-class VioletPipeline:
+class VioletImageCaptioningPipeline:
   """
   Pipeline for image captioning using the Violet model.
   """
