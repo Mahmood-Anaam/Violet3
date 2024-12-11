@@ -1,122 +1,178 @@
-import warnings
-warnings.filterwarnings("ignore")
-
 import torch
-import torchvision.transforms as transforms
+from torchvision import transforms
 from PIL import Image
 import requests
+from io import BytesIO
 import numpy as np
 from transformers import AutoTokenizer
-from violet.modeling import Violet, VisualEncoder, ScaledDotProductAttention
-
+from violet.modeling.modeling_violet import Violet
+from violet.modeling.transformer.encoders import VisualEncoder
+from violet.modeling.transformer.attention import ScaledDotProductAttention
 
 class VioletPipeline:
     def __init__(self, cfg):
+        """
+        Initialize the VioletPipeline.
+
+        Args:
+            cfg (VioletConfig): Configuration object containing model parameters.
+        """
         self.cfg = cfg
+        self.device = self.cfg.DEVICE
 
-        # Load tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(cfg.TOKENIZER_NAME)
-
-        # Initialize model components
-        self.encoder = VisualEncoder(
-            N=cfg.ENCODER_LAYERS, 
-            padding_idx=0, 
+        # Initialize model and tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(self.cfg.TOKENIZER_NAME)
+        encoder = VisualEncoder(
+            N=self.cfg.ENCODER_LAYERS,
+            padding_idx=0,
+            d_model=768,
+            d_k=64,
+            d_v=64,
+            h=12,
+            d_ff=2048,
+            dropout=0.1,
             attention_module=ScaledDotProductAttention
         )
         self.model = Violet(
-            bos_idx=self.tokenizer.vocab["<|endoftext|>"],
-            encoder=self.encoder,
-            n_layer=cfg.DECODER_LAYERS,
-            tau=cfg.TAU,
+            bos_idx=self.tokenizer.vocab['<|endoftext|>'],
+            encoder=encoder,
+            n_layer=self.cfg.DECODER_LAYERS,
+            tau=self.cfg.TAU
         )
+        checkpoint = torch.load(self.cfg.CHECKPOINT_DIR, map_location=self.device)
+        self.model.load_state_dict(checkpoint['state_dict'], strict=False)
+        self.model.to(self.device)
+        self.model.eval()
 
-        # Load checkpoint
-        checkpoint = torch.load(cfg.CHECKPOINT_DIR, map_location=cfg.DEVICE)
-        self.model.load_state_dict(checkpoint["state_dict"], strict=False)
-        self.model.eval().to(cfg.DEVICE)
-
-        # Define image preprocessing transform
         self.transform = transforms.Compose([
-            transforms.Resize(cfg.IMAGE_RESIZE),
-            transforms.CenterCrop(cfg.IMAGE_CROP),
+            transforms.Resize((self.cfg.IMAGE_RESIZE, self.cfg.IMAGE_RESIZE)),
+            transforms.CenterCrop(self.cfg.IMAGE_CROP),
             transforms.ToTensor(),
-            transforms.Normalize(mean=cfg.IMAGE_MEAN, std=cfg.IMAGE_STD),
+            transforms.Normalize(mean=self.cfg.IMAGE_MEAN, std=self.cfg.IMAGE_STD),
         ])
 
-    def _preprocess_image(self, image):
+    def _load_image(self, image):
         """
-        Preprocess a single image based on its type (URL, path, tensor, array, or PIL image).
+        Load an image from various input formats (URL, path, PIL image, array, tensor).
+
+        Args:
+            image: Image input (URL, file path, PIL image, numpy array, or torch tensor).
+
+        Returns:
+            torch.Tensor: Transformed image tensor.
         """
-        if isinstance(image, str):  # URL or file path
-            try:
-                # Check if it's a URL
-                image = Image.open(requests.get(image, stream=True).raw).convert("RGB")
-            except Exception:
-                # If it's not a URL, treat it as a file path
+        if isinstance(image, str):
+            if image.startswith("http"):
+                response = requests.get(image)
+                image = Image.open(BytesIO(response.content)).convert("RGB")
+            else:
                 image = Image.open(image).convert("RGB")
-        elif isinstance(image, np.ndarray):  # Array
-            image = Image.fromarray(image.astype("uint8")).convert("RGB")
-        elif isinstance(image, torch.Tensor):  # Tensor
-            if len(image.shape) == 3:
-                return image.unsqueeze(0)  # Assume the tensor is already preprocessed
-            return image
-        elif isinstance(image, Image.Image):  # PIL Image
-            pass
-        else:
-            raise ValueError(f"Unsupported image type: {type(image)}")
-        return self.transform(image).unsqueeze(0)
+        elif isinstance(image, np.ndarray):
+            image = Image.fromarray(image).convert("RGB")
+        elif isinstance(image, torch.Tensor):
+            if len(image.shape) == 3:  # Assume single RGB image
+                return image.unsqueeze(0).to(self.device)
+            return image.to(self.device)
+        elif not isinstance(image, Image.Image):
+            raise ValueError("Unsupported image format")
 
-    def _preprocess_batch(self, inputs):
-        """
-        Preprocess a batch of images, supporting mixed types.
-        """
-        preprocessed_images = []
-        for image in inputs:
-            preprocessed_images.append(self._preprocess_image(image))
-        return torch.cat(preprocessed_images).to(self.cfg.DEVICE)
+        return self.transform(image).unsqueeze(0).to(self.device)
 
-    def _generate_output(self, visual_features):
+    def _process_batch(self, images):
         """
-        Generate captions and/or extract features based on the configuration.
+        Process a batch of images into a tensor.
+
+        Args:
+            images (list): List of images in various formats.
+
+        Returns:
+            torch.Tensor: Batch of image tensors.
         """
-        results = []
+        tensors = [self._load_image(image) for image in images]
+        return torch.cat(tensors, dim=0)
+
+    def _generate_features(self, images):
+        """
+        Extract visual features from the model's encoder.
+
+        Args:
+            images (torch.Tensor): Batch of image tensors.
+
+        Returns:
+            torch.Tensor: Encoded visual features.
+        """
         with torch.no_grad():
-            if self.cfg.OUTPUT_TYPE in ["captions", "both"]:
-                output, _ = self.model.beam_search(
-                    visual=visual_features,
-                    max_len=self.cfg.MAX_LENGTH,
-                    eos_idx=self.tokenizer.vocab["<|endoftext|>"],
-                    beam_size=self.cfg.BEAM_SIZE,
-                    out_size=self.cfg.OUT_SIZE,
-                )
-                captions = [
-                    [
-                        self.tokenizer.decode(seq, skip_special_tokens=True)
-                        for seq in output[i]
-                    ]
-                    for i in range(output.size(0))
-                ]
+            outputs = self.model.clip(images)
+            image_embeds = outputs.image_embeds.unsqueeze(1)  # Add sequence dimension
+            features, _ = self.model.encoder(image_embeds)
+        return features
 
-            for i in range(visual_features.size(0)):
-                result = {}
-                if self.cfg.OUTPUT_TYPE in ["features", "both"]:
-                    result["features"] = visual_features[i].cpu().numpy()
-                if self.cfg.OUTPUT_TYPE in ["captions", "both"]:
-                    result["captions"] = captions[i]
-                results.append(result)
-
-        return results
-
-    def predict(self, inputs):
+    def generate_captions_from_features(self, features):
         """
-        Main prediction method. Accepts a single input or a batch of inputs.
+        Generate captions given pre-extracted visual features.
+
+        Args:
+            features (torch.Tensor): Encoded visual features.
+
+        Returns:
+            list: Generated captions for each feature set.
         """
-        # Ensure inputs is a list for consistent processing
-        if not isinstance(inputs, list):
-            inputs = [inputs]
+        with torch.no_grad():
+            output, _ = self.model.beam_search(
+                visual=features,
+                max_len=self.cfg.MAX_LENGTH,
+                eos_idx=self.tokenizer.vocab['<|endoftext|>'],
+                beam_size=self.cfg.BEAM_SIZE,
+                out_size=self.cfg.OUT_SIZE,
+                is_feature=True
+            )
+            captions = [
+                [self.tokenizer.decode(seq, skip_special_tokens=True) for seq in output[i]]
+                for i in range(output.shape[0])
+            ]
+        return captions
 
-        # Preprocess inputs
-        visual_features = self._preprocess_batch(inputs)
+    def generate_captions(self, images):
+        """
+        Generate captions for input images.
 
-        # Generate output
-        return self._generate_output(visual_features)
+        Args:
+            images (list or single image): Input images in various formats.
+
+        Returns:
+            list: Generated captions for each image.
+        """
+        if not isinstance(images, list):
+            images = [images]
+        image_tensors = self._process_batch(images)
+        features = self._generate_features(image_tensors)
+        return self.generate_captions_from_features(features)
+
+    def generate_captions_with_features(self, images):
+        """
+        Generate captions and extract features for input images.
+
+        Args:
+            images (list or single image): Input images in various formats.
+
+        Returns:
+            list of dict: A list where each element contains 'captions' and 'features'.
+        """
+        if not isinstance(images, list):
+            images = [images]
+        image_tensors = self._process_batch(images)
+        features = self._generate_features(image_tensors)
+        captions = self.generate_captions_from_features(features)
+        return [{"captions": c, "features": f.cpu().numpy()} for c, f in zip(captions, features)]
+
+    def __call__(self, images):
+        """
+        Callable interface to generate captions for input images.
+
+        Args:
+            images (list or single image): Input images in various formats.
+
+        Returns:
+            list: Generated captions for each image.
+        """
+        return self.generate_captions(images)

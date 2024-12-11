@@ -1,3 +1,4 @@
+# src\violet\modeling\transformer\captioning_model.py
 import torch
 from torch import distributions
 import violet.utils as utils
@@ -14,6 +15,8 @@ class CaptioningModel(Module):
 
     def step(self, t, prev_output, visual, seq, mode='teacher_forcing', **kwargs):
         raise NotImplementedError
+    
+
 
     def forward(self, images, seq, *args):
         device = images.device

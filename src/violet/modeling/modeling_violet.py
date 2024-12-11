@@ -1,3 +1,4 @@
+# src\violet\modeling\modeling_violet.py
 import torch
 from torch import nn
 import copy
@@ -17,7 +18,7 @@ class Violet(CaptioningModel):
         self.bos_idx = bos_idx
         self.encoder = encoder
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.clip = CLIPVisionModelWithProjection.from_pretrained("openai/clip-vit-large-patch14",cache_dir = "./").to(self.device)
+        self.clip = CLIPVisionModelWithProjection.from_pretrained("openai/clip-vit-large-patch14").to(self.device)
         # self.clip.to("cuda")
         jasmine = AutoModelForCausalLM.from_pretrained("UBC-NLP/Jasmine-350M")  
         state_dict = jasmine.state_dict()
@@ -86,23 +87,50 @@ class Violet(CaptioningModel):
         return [torch.zeros((b_s, 0), dtype=torch.long, device=device),
                 None, None]
 
-    def step(self, t, prev_output, visual, seq, past, mode='teacher_forcing', **kwargs):
+    def step(self, t, prev_output, visual=None, seq=None, past=None, mode='teacher_forcing', **kwargs):
+        """
+        Perform a decoding step, handling both raw images (visual) and precomputed features.
+
+        Args:
+            t (int): Current decoding time step.
+            prev_output (torch.Tensor): Previous output tokens.
+            visual (torch.Tensor, optional): Raw image tensor input or precomputed features.
+            seq (torch.Tensor, optional): Target sequence for teacher forcing.
+            past (torch.Tensor, optional): Past decoder states.
+            mode (str, optional): Decoding mode ('teacher_forcing' or 'feedback').
+            kwargs: Additional arguments. Expected to include:
+                - is_feature (bool): Whether `visual` is precomputed features or raw images.
+
+        Returns:
+            torch.Tensor: Decoder outputs.
+        """
         it = None
+        is_feature = kwargs.get("is_feature", False)
+
         if mode == 'teacher_forcing':
             raise NotImplementedError
+
         elif mode == 'feedback':
             if t == 0:
-                with torch.no_grad():
-                    outputs = self.clip(visual) #the clip boi
-                    image_embeds = outputs.image_embeds # Visual projection output
-                    image_embeds = image_embeds.unsqueeze(1)
-                self.enc_output, self.mask_enc = self.encoder(image_embeds)
-                if isinstance(visual, torch.Tensor):
-                    it = visual.data.new_full((visual.shape[0], 1), self.bos_idx).long()
+                if not is_feature and visual is not None:
+                    with torch.no_grad():
+                        outputs = self.clip(visual)
+                        image_embeds = outputs.image_embeds  # Visual projection output
+                        image_embeds = image_embeds.unsqueeze(1)
+                    self.enc_output, self.mask_enc = self.encoder(image_embeds)
+                elif is_feature and visual is not None:
+                    self.enc_output, self.mask_enc = visual, None
                 else:
-                    it = visual[0].data.new_full((visual[0].shape[0], 1), self.bos_idx).long()
+                    raise ValueError("Input is missing or invalid.")
+
+                if isinstance(visual, torch.Tensor):
+                    it = visual.new_full((visual.shape[0], 1), self.bos_idx).long()
+                else:
+                    raise ValueError("Failed to determine batch size for input.")
             else:
                 it = prev_output
 
-        return self.decoder(it, self.enc_output, self.mask_enc,past=past)
+        return self.decoder(it, self.enc_output, self.mask_enc, past=past)
+
+    
 
