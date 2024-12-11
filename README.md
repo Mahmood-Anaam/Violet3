@@ -1,4 +1,4 @@
-# Violet: Arabic Image Captioning with Transformer Models
+# Violet: Arabic Image Captioning
 
 **Violet** is a Python-based library designed for generating **Arabic image captions**. The pipeline leverages state-of-the-art transformer models, providing an easy-to-use interface for researchers and developers working on tasks such as image captioning and visual question answering (VQA).
 
@@ -7,7 +7,6 @@
 2. **Visual Feature Extraction**: Extract image features for integration into vision-language models or downstream tasks.
 3. **Customizable for VQA**: Use extracted features and captions to build Arabic visual question-answering systems.
 4. **Mixed Input Support**: Handle batches of images in various formats, such as URLs, file paths, NumPy arrays, PyTorch tensors, and PIL Image objects.
-
 
 ## How to Use Violet
 
