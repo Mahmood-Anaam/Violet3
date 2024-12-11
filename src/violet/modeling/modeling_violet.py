@@ -119,7 +119,7 @@ class Violet(CaptioningModel):
                         image_embeds = image_embeds.unsqueeze(1)
                     self.enc_output, self.mask_enc = self.encoder(image_embeds)
                 elif is_feature and visual is not None:
-                    self.enc_output, self.mask_enc = visual, None
+                    self.enc_output, self.mask_enc = visual
                 else:
                     raise ValueError("Input is missing or invalid.")
 
